@@ -106,6 +106,25 @@ func (g *Grafo) Copia() *Grafo {
 	return c
 }
 
+// Cambios lista los tramos cuyo tiempo es distinto al de la red original.
+func (g *Grafo) Cambios(original *Grafo) []string {
+	var cambios []string
+	for i := range g.W {
+		for j := range g.W[i] {
+			if g.W[i][j] == original.W[i][j] {
+				continue
+			}
+			nuevo := "cerrado"
+			if g.W[i][j] > 0 {
+				nuevo = fmt.Sprintf("%g min", g.W[i][j])
+			}
+			cambios = append(cambios, fmt.Sprintf("%s → %s: %g min → %s",
+				g.Nombres[i], g.Nombres[j], original.W[i][j], nuevo))
+		}
+	}
+	return cambios
+}
+
 // Cuenta los pares de nodos conectados en ambos sentidos (y cuántos de ellos
 // tienen un tiempo distinto en cada sentido) y los tramos de un solo sentido.
 func (g *Grafo) Resumen() (dobles, distintos, unSentido int) {
