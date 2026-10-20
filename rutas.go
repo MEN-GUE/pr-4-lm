@@ -92,6 +92,22 @@ func PoliticaReversible(g *Grafo) Politica {
 	return p
 }
 
+// resaltarRutas marca los tramos de una política para dibujarlos en el grafo:
+// verde los de ida y naranja los de regreso.
+func resaltarRutas(g *Grafo, pol Politica) map[[2]int]string {
+	m := map[[2]int]string{}
+	marcar := func(ruta []string, color string) {
+		for k := 0; k+1 < len(ruta); k++ {
+			m[[2]int{g.Indice(ruta[k]), g.Indice(ruta[k+1])}] = color
+		}
+	}
+	for _, d := range destinos {
+		marcar(pol[d].Ida, "darkgreen")
+		marcar(pol[d].Regreso, "darkorange")
+	}
+	return m
+}
+
 func esDestino(nombre string) bool {
 	for _, d := range destinos {
 		if d == nombre {

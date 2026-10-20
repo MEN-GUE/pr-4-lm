@@ -287,22 +287,14 @@ func (a *App) grafo(w http.ResponseWriter, r *http.Request) {
 	a.mu.Unlock()
 
 	var pol Politica
-	var err error
 	if r.URL.Query().Get("rutas") == "actual" {
-		pol, err = PoliticaActual(red)
+		pol, _ = PoliticaActual(red)
 	} else {
-		pol, err = PoliticaAlgoritmo(red)
-	}
-	resaltar := map[[2]int]string{}
-	if err == nil {
-		for _, ruta := range pol {
-			marcar(red, resaltar, ruta.Ida, "darkgreen")
-			marcar(red, resaltar, ruta.Regreso, "darkorange")
-		}
+		pol, _ = PoliticaAlgoritmo(red)
 	}
 
 	cmd := exec.Command("neato", "-n2", "-Tsvg")
-	cmd.Stdin = strings.NewReader(red.DOT(resaltar))
+	cmd.Stdin = strings.NewReader(red.DOT(resaltarRutas(red, pol)))
 	svg, err := cmd.Output()
 	if err != nil {
 		http.Error(w, "no se pudo generar el grafo: "+err.Error(), http.StatusInternalServerError)
@@ -311,10 +303,4 @@ func (a *App) grafo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "image/svg+xml")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Write(svg)
-}
-
-func marcar(g *Grafo, m map[[2]int]string, ruta []string, color string) {
-	for k := 0; k+1 < len(ruta); k++ {
-		m[[2]int{g.Indice(ruta[k]), g.Indice(ruta[k+1])}] = color
-	}
 }

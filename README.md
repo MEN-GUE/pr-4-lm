@@ -27,4 +27,22 @@ Luego abrir <http://localhost:8080>. Desde la página se puede:
 
 Opciones: `-puerto` (8080 por defecto) y `-matriz` (ruta del CSV).
 
+## Datos y figuras del informe
+
+Los experimentos usan 8 vehículos, 8 horas de recepción y las semillas 1 a 10
+(se cambia con `-repeticiones`). Los resultados quedan en CSV:
+
+```
+go run . -exportar informe/datos
+go run . -cerrar N17-N25,N25-N17 -exportar informe/datos/incidente
+```
+
+El grafo se exporta en formato DOT y se dibuja con Graphviz:
+
+```
+go run . -dot informe/figuras
+neato -n2 -Tpdf informe/figuras/grafo.dot -o informe/figuras/grafo.pdf
+neato -n2 -Tpdf informe/figuras/grafo_rutas.dot -o informe/figuras/grafo_rutas.pdf
+```
+
 Pruebas: `go test ./...`
