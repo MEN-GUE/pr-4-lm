@@ -27,6 +27,12 @@ Luego abrir <http://localhost:8080>. Desde la página se puede:
 
 Opciones: `-puerto` (8080 por defecto) y `-matriz` (ruta del CSV).
 
+## Informe
+
+El informe está en `informe/informe.pdf`, con su fuente en `informe/informe.tex`.
+Se compila con pdfLaTeX (por ejemplo en Overleaf) junto con las carpetas
+`informe/figuras` e `informe/datos`.
+
 ## Datos y figuras del informe
 
 Los experimentos usan 8 vehículos, 8 horas de recepción y las semillas 1 a 10

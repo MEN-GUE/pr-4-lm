@@ -9,11 +9,12 @@
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{tabularx}
-\usepackage{float}
 \usepackage{caption}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
 \usepackage[hidelinks]{hyperref}
+\hypersetup{pdftitle={Práctica 4: Rutas de reparto y tamaño de flota en Logística del Valle},
+  pdfauthor={Juan Fernando Menéndez Guerra}}
 
 \captionsetup{font=small, labelfont=bf}
 \setlength{\parskip}{0.4em}
@@ -24,7 +25,7 @@
     ymin=0, enlarge x limits=0.25, enlarge y limits={upper, value=0.25},
     xtick={0,1,2}, xticklabels={Normal,Semana Santa,Navidad},
     tick label style={font=\footnotesize}, ylabel style={font=\footnotesize},
-    nodes near coords={\pgfmathprintnumber[fixed, precision=1]{\pgfplotspointmeta}},
+    nodes near coords={\pgfmathprintnumber[fixed, zerofill, precision=1]{\pgfplotspointmeta}},
     every node near coord/.append style={font=\tiny, rotate=90, anchor=west},
   },
   actual/.style={fill=gray!40, draw=gray!70!black},
@@ -83,13 +84,13 @@ Para responder estas preguntas se construyó un grafo dirigido a partir de la ma
 
 \subsection{Decisiones que se evalúan}
 
-La primera decisión es la política de rutas: mantener los recorridos de las hojas de despacho o cambiarlos por los que recomienda el algoritmo. La segunda es el número de vehículos, que se evalúa para cada escenario de demanda. La tercera es cómo responder a un incidente vial, cuando un tramo se congestiona o se cierra, y cuánto afecta ese cambio a cada política.
+La primera decisión es si se mantienen los recorridos de las hojas de despacho o si se cambian por los que recomienda el algoritmo. La segunda es el número de vehículos, que se evalúa para cada escenario de demanda. La tercera es cómo responder a un incidente vial, cuando un tramo se congestiona o se cierra, y cuánto afecta ese cambio a cada política.
 
 \subsection{Supuestos del modelo}
 
 \begin{itemize}
   \item Los tiempos de viaje son los de la matriz y no cambian con la hora del día ni de un viaje a otro.
-  \item La carga en la bodega y la entrega al cliente no consumen tiempo: la entrega ocurre al llegar al destino.
+  \item La carga en la bodega y la entrega al cliente no consumen tiempo, por lo que la entrega se registra en el momento en que el vehículo llega al destino.
   \item Los pedidos llegan según un proceso de Poisson con tasa constante durante la recepción, y cada destino tiene probabilidad $1/4$.
   \item Al iniciar la jornada todos los vehículos están libres en N01. No se consideran averías, descansos ni cambios de turno, y los vehículos pueden seguir trabajando después de las ocho horas.
   \item Si hay varios vehículos libres sale el que lleva más tiempo esperando. Como los vehículos son iguales, esta regla no cambia los resultados de los pedidos.
@@ -99,27 +100,27 @@ La primera decisión es la política de rutas: mantener los recorridos de las ho
 
 \section{Grafo generado}
 
-La matriz se interpretó como un grafo dirigido y ponderado $G=(V,A,w)$ con $|V|=40$. Existe el arco $(i,j)$ cuando la celda de la fila $i$ y la columna $j$ tiene un valor, y su peso $w(i,j)$ es el tiempo de viaje en minutos. Una calle de doble sentido aparece como dos arcos, $(i,j)$ y $(j,i)$, que pueden tener tiempos distintos, y una calle de un solo sentido como un único arco. En el programa la red se guarda igual que la matriz, en un arreglo de $40\times 40$ en el que $-1$ indica que no hay conexión. Al leer el archivo hay que tener cuidado con las celdas vacías: si se tomaran como cero, aparecerían tramos sin costo entre puntos que no están conectados.
+La matriz se interpretó como un grafo dirigido y ponderado $G=(V,A,w)$ con $|V|=40$. Existe el arco $(i,j)$ cuando la celda de la fila $i$ y la columna $j$ tiene un valor, y su peso $w(i,j)$ es el tiempo de viaje en minutos. Una calle de doble sentido aparece como dos arcos, $(i,j)$ y $(j,i)$, que pueden tener tiempos distintos, y una calle de un solo sentido como un único arco. En el programa la red se guarda igual que la matriz, en un arreglo de $40\times 40$ en el que $-1$ indica que no hay conexión. Al leer el archivo, las celdas vacías no pueden tomarse como cero, porque aparecerían tramos sin costo entre puntos que no están conectados.
 
 La red tiene 144 arcos. Hay 63 pares de nodos conectados en ambos sentidos; en 14 de ellos el tiempo cambia según el sentido, por ejemplo N04$\rightarrow$N11 tarda 9 minutos y N11$\rightarrow$N04 tarda 5. Los 18 arcos restantes son calles de un solo sentido, entre ellas N01$\rightarrow$N17, N02$\rightarrow$N18, N11$\rightarrow$N13, N17$\rightarrow$N26 y N18$\rightarrow$N26. Desde cualquier punto se puede llegar a cualquier otro, de modo que el grafo es fuertemente conexo.
 
 La Figura~\ref{fig:grafo} muestra el grafo dibujado con Graphviz (Gansner y North, 2000) a partir de un archivo DOT que genera el programa. Como no se proporcionó un mapa, los nodos se acomodaron en una cuadrícula de cinco filas y ocho columnas según su numeración, porque casi todos los tramos unen nodos con números consecutivos o separados por ocho. La posición de los nodos no representa su ubicación geográfica. Los sentidos de circulación se representan con el color y las flechas, y los tiempos con la etiqueta de cada tramo.
 
-\begin{figure}[H]
+\begin{figure}[htbp]
   \centering
   \includegraphics[width=\textwidth]{figuras/grafo.pdf}
   \caption{Grafo de la red. Negro: doble sentido con el mismo tiempo. Azul: doble sentido con tiempos distintos; la etiqueta $a/b$ indica el tiempo del nodo de menor número al de mayor número ($a$) y el del sentido contrario ($b$). Rojo con flecha: un solo sentido. El rectángulo es la bodega y los círculos de borde grueso son los destinos.}
   \label{fig:grafo}
 \end{figure}
 
-Para validar una ruta se recorre su secuencia de nodos, se comprueba que exista cada arco y se suman sus tiempos. El regreso se valida de la misma forma con la secuencia invertida, porque un tramo que existe de ida puede no existir de vuelta. La Tabla~\ref{tab:actuales} resume el resultado. Las cuatro rutas son válidas en ambos sentidos y tardan lo mismo de ida que de regreso, ya que todos sus tramos son de doble sentido con el mismo tiempo; por lo tanto, la indicación de las hojas de despacho sí puede cumplirse. Sin embargo, la ruta a N40 tarda 93 minutos solo de ida, de modo que con ella ninguna entrega a N40 puede ser puntual, aunque el pedido no espere.
+Para validar una ruta se recorre su secuencia de nodos, se comprueba que exista cada arco y se suman sus tiempos. El regreso se valida de la misma forma con la secuencia invertida, porque un tramo que existe de ida puede no existir de vuelta. La Tabla~\ref{tab:actuales} resume el resultado. Las cuatro rutas son válidas en ambos sentidos y tardan lo mismo de ida que de regreso, ya que todos sus tramos son de doble sentido con el mismo tiempo. Por lo tanto, la indicación de las hojas de despacho sí puede cumplirse. Sin embargo, la ruta a N40 tarda 93 minutos solo de ida, de modo que con ella ninguna entrega a N40 puede ser puntual, aunque el pedido no espere.
 
-\begin{table}[H]
+\begin{table}[htbp]
   \centering
   \small
   \caption{Validación de las rutas registradas en las hojas de despacho.}
   \label{tab:actuales}
-  \begin{tabularx}{\textwidth}{l X r r c}
+  \begin{tabularx}{\textwidth}{l >{\raggedright\arraybackslash}X r r c}
     \toprule
     Destino & Ruta de ida registrada & Ida (min) & Regreso (min) & Válida \\
     \midrule
@@ -137,18 +138,18 @@ El problema consiste en encontrar el camino de menor tiempo desde N01 hacia cada
 
 El algoritmo de Dijkstra (1959) mantiene un conjunto de nodos con distancia definitiva. En cada paso agrega el nodo no visitado con menor distancia tentativa y actualiza a sus vecinos si a través de él se llega en menos tiempo. Solo funciona con pesos no negativos, que es el caso de los tiempos de viaje. Con la matriz de adyacencia, la versión más simple es $O(V^2)$; con un montículo binario baja a $O((V+E)\log V)$ (Cormen et al., 2022).
 
-El algoritmo de Bellman--Ford (Bellman, 1958) relaja todos los arcos $V-1$ veces, con complejidad $O(VE)$. Su ventaja es que acepta pesos negativos y detecta ciclos negativos, algo que no se presenta en una red de calles; aquí haría más trabajo sin dar un mejor resultado.
+El algoritmo de Bellman--Ford (Bellman, 1958) relaja todos los arcos $V-1$ veces, con complejidad $O(VE)$. Su ventaja es que acepta pesos negativos y detecta ciclos negativos, algo que no se presenta en una red de calles, así que aquí haría más trabajo sin dar un mejor resultado.
 
 El algoritmo de Floyd--Warshall (Floyd, 1962) calcula las distancias entre todos los pares de nodos por programación dinámica, en $O(V^3)$. Para 40 nodos son 64\,000 iteraciones, un costo bajo, pero se obtienen 1560 distancias cuando solo se necesitan ocho (cuatro idas y cuatro regresos), y para reconstruir los caminos hace falta guardar una matriz adicional.
 
-A* (Hart et al., 1968) agrega a la idea de Dijkstra una heurística $h(n)$ que estima el costo que falta para llegar al destino. Si la heurística es admisible, es decir, si nunca sobreestima el costo real, A* encuentra el camino óptimo y explora menos nodos. En esta red no hay coordenadas ni distancias en línea recta: la cuadrícula de la Figura~\ref{fig:grafo} es solo una forma de dibujar el grafo, por lo que una heurística basada en ella podría sobreestimar y producir rutas que no son las más cortas. Sin esos datos, la heurística más simple que sigue siendo admisible es $h(n)=0$, con la que A* se comporta exactamente como Dijkstra; cualquier estimación confiable distinta tendría que calcularse recorriendo el propio grafo, que es justamente el trabajo que ya hace Dijkstra.
+A* (Hart et al., 1968) agrega a la idea de Dijkstra una heurística $h(n)$ que estima el costo que falta para llegar al destino. Si la heurística es admisible, es decir, si nunca sobreestima el costo real, A* encuentra el camino óptimo y explora menos nodos. En esta red no hay coordenadas ni distancias en línea recta. La cuadrícula de la Figura~\ref{fig:grafo} es solo una forma de dibujar el grafo, y una heurística basada en ella podría sobreestimar y producir rutas que no son las más cortas. Sin esos datos, la heurística más simple que sigue siendo admisible es $h(n)=0$, con la que A* se comporta exactamente como Dijkstra. Cualquier otra estimación confiable tendría que calcularse recorriendo el propio grafo, que es el trabajo que ya hace Dijkstra.
 
-\begin{table}[H]
+\begin{table}[htbp]
   \centering
   \small
   \caption{Comparación de algoritmos para la búsqueda de rutas en esta red.}
   \label{tab:algoritmos}
-  \begin{tabularx}{\textwidth}{p{2.3cm} p{2.6cm} p{2.6cm} X}
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.5cm} >{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}p{2.9cm} >{\raggedright\arraybackslash}X}
     \toprule
     Algoritmo & Problema que resuelve & Complejidad & Ventajas y limitaciones en esta red \\
     \midrule
@@ -160,20 +161,20 @@ A* (Hart et al., 1968) agrega a la idea de Dijkstra una heurística $h(n)$ que e
   \end{tabularx}
 \end{table}
 
-Se eligió Dijkstra porque los pesos son positivos, porque cada ejecución resuelve justo lo que se necesita (un origen y sus destinos) y porque su versión con matriz es sencilla de implementar sobre los datos tal como vienen. Las ocho ejecuciones de $O(V^2)$ toman un tiempo despreciable, lo que permite recalcular las rutas cada vez que se modifica la red en la aplicación. No se usó ninguna heurística, así que las rutas obtenidas son óptimas.
+Se eligió Dijkstra porque los pesos son positivos y cada ejecución resuelve justo lo que se necesita, un origen y sus destinos. A esto se suma que la versión con matriz es sencilla de implementar sobre los datos tal como vienen. Las ocho ejecuciones de $O(V^2)$ toman un tiempo despreciable, lo que permite recalcular las rutas cada vez que se modifica la red en la aplicación. No se usó ninguna heurística, así que las rutas obtenidas son óptimas.
 
-En la implementación, las distancias empiezan en infinito, salvo la del origen, y se guarda para cada nodo el nodo anterior en el mejor camino encontrado. En cada iteración se elige el nodo no visitado con menor distancia, y si hay empate se toma el de menor número. Al terminar, el camino se reconstruye siguiendo los nodos anteriores desde el destino. La ida se calcula con origen en N01 y el regreso con origen en cada destino, porque las calles de un solo sentido hacen que el mejor camino de vuelta no sea el de ida invertido. En tres casos hay dos caminos con el mismo tiempo mínimo: la ida a N34 (24 minutos, también por N02, N18 y N26), el regreso desde N08 (59 minutos, también por N12) y el regreso desde N40 (61 minutos, también por N39, N38 y N37). Como el nodo anterior solo se reemplaza cuando se encuentra un tiempo estrictamente menor, la implementación conserva el primero de esos caminos y el resultado siempre es el mismo; el tiempo no cambia.
+En la implementación, las distancias empiezan en infinito, salvo la del origen, y se guarda para cada nodo el nodo anterior en el mejor camino encontrado. En cada iteración se elige el nodo no visitado con menor distancia, y si hay empate se toma el de menor número. Al terminar, el camino se reconstruye siguiendo los nodos anteriores desde el destino. La ida se calcula con origen en N01 y el regreso con origen en cada destino, porque las calles de un solo sentido hacen que el mejor camino de vuelta no sea el de ida invertido. En tres casos hay dos caminos con el mismo tiempo mínimo: la ida a N34 (24 minutos, también por N02, N18 y N26), el regreso desde N08 (59 minutos, también por N12) y el regreso desde N40 (61 minutos, también por N39, N38 y N37). Como el nodo anterior solo se reemplaza cuando se encuentra un tiempo estrictamente menor, la implementación conserva el primero de esos caminos y el resultado siempre es el mismo, sin que cambie el tiempo.
 
 \section{Validación de rutas alternativas}
 
-Para cada destino se compararon dos alternativas con la ruta actual. La primera es la del algoritmo de Dijkstra, con la ida y el regreso calculados por separado. La segunda es el mejor camino que usa solo calles de doble sentido, de modo que el vehículo pueda volver por el mismo camino como indican las hojas de despacho; en la tabla aparece como ``Doble sentido''. Esta segunda ruta también se obtuvo con Dijkstra, pero sobre el subgrafo de calles de doble sentido y con un costo por tramo igual a la suma de sus tiempos de ida y de vuelta, de modo que se minimiza directamente el viaje completo. La Tabla~\ref{tab:rutas} presenta la comparación; la columna Margen es $75-\text{ida}$, el tiempo máximo que un pedido puede esperar en la bodega y aun así ser puntual.
+Para cada destino se compararon dos alternativas con la ruta actual. La primera es la del algoritmo de Dijkstra, con la ida y el regreso calculados por separado. La segunda es el mejor camino que usa solo calles de doble sentido, para que el vehículo pueda volver por el mismo camino como indican las hojas de despacho. En la tabla aparece como ``Doble sentido''. Esta segunda ruta también se obtuvo con Dijkstra, pero sobre el subgrafo de calles de doble sentido y con un costo por tramo igual a la suma de sus tiempos de ida y de vuelta, con lo que se minimiza directamente el viaje completo. La Tabla~\ref{tab:rutas} presenta la comparación. La columna Margen es $75-\text{ida}$, el tiempo máximo que un pedido puede esperar en la bodega y aun así ser puntual.
 
-\begin{table}[H]
+\begin{table}[htbp]
   \centering
   \footnotesize
   \caption{Comparación de rutas por destino. Los tiempos están en minutos.}
   \label{tab:rutas}
-  \begin{tabularx}{\textwidth}{l l X r r r r}
+  \begin{tabularx}{\textwidth}{l l >{\raggedright\arraybackslash}X r r r r}
     \toprule
     Destino & Alternativa & Recorrido & Ida & Regreso & Total & Margen \\
     \midrule
@@ -202,11 +203,11 @@ En N19 la diferencia es mayor. Usando el tramo de un solo sentido N02$\rightarro
 
 En N34 la ida se reduce de 42 a 24 minutos con los tramos de un solo sentido N01$\rightarrow$N17 y N17$\rightarrow$N26, y el regreso de 42 a 34 minutos. El viaje completo pasa de 84 a 58 minutos (31\,\% menos).
 
-N40 es el caso más claro. La ruta actual pasa por N08 y luego sigue por N16, N24 y N32, con 93 minutos de ida; Dijkstra atraviesa la red por N17, N25, N27, N29, N31 y N32 y llega en 47 minutos, la mitad del tiempo. El regreso tarda 61 minutos, por lo que el viaje completo pasa de 186 a 108 minutos (42\,\% menos). Además, la entrega deja de ser imposible: con la ruta actual el margen es de $-18$ minutos y con la nueva un pedido puede esperar hasta 28 minutos y seguir siendo puntual.
+N40 es el caso más claro. La ruta actual pasa por N08 y luego sigue por N16, N24 y N32, con 93 minutos de ida; Dijkstra atraviesa la red por N17, N25, N27, N29, N31 y N32 y llega en 47 minutos, la mitad del tiempo. El regreso tarda 61 minutos, por lo que el viaje completo pasa de 186 a 108 minutos (42\,\% menos). Lo más importante es que la entrega deja de ser imposible. Con la ruta actual el margen es de $-18$ minutos, mientras que con la nueva un pedido puede esperar hasta 28 minutos y seguir siendo puntual.
 
-Si cada destino recibe la cuarta parte de los pedidos, el viaje completo promedio es de $(118+66+84+186)/4=113.5$ minutos con las rutas actuales, de $(110+42+58+108)/4=79.5$ minutos con las de Dijkstra (30\,\% menos) y de 87.25 minutos con las rutas de doble sentido. Las idas de Dijkstra no pueden recorrerse al revés: en N08, N19, N34 y N40 la ida usa al menos un tramo de un solo sentido (N11$\rightarrow$N13, N02$\rightarrow$N18, N17$\rightarrow$N26 y N01$\rightarrow$N17, respectivamente), así que con estas rutas el regreso debe planificarse aparte y deja de aplicarse la regla de las hojas. Aun si la empresa quisiera conservar esa regla, la ruta de doble sentido es más corta que la actual en los cuatro destinos. Por lo tanto, la ruta que se usa actualmente solo es competitiva en el regreso desde N08; en los demás casos existen alternativas válidas que reducen el tiempo, y la mejor es la de Dijkstra. La Figura~\ref{fig:rutas} muestra las rutas recomendadas sobre el grafo.
+Si cada destino recibe la cuarta parte de los pedidos, el viaje completo promedio es de $(118+66+84+186)/4=113.5$ minutos con las rutas actuales, de $(110+42+58+108)/4=79.5$ minutos con las de Dijkstra (30\,\% menos) y de 87.25 minutos con las rutas de doble sentido. Las idas de Dijkstra no pueden recorrerse al revés, porque las de N08, N19, N34 y N40 usan, respectivamente, los tramos de un solo sentido N11$\rightarrow$N13, N02$\rightarrow$N18, N17$\rightarrow$N26 y N01$\rightarrow$N17. Con estas rutas el regreso debe planificarse aparte y deja de aplicarse la regla de las hojas. Aun si la empresa quisiera conservar esa regla, la ruta de doble sentido es más corta que la actual en los cuatro destinos. Por lo tanto, la ruta que se usa actualmente solo es competitiva en el regreso desde N08; en los demás casos existen alternativas válidas que reducen el tiempo, y la mejor es la de Dijkstra. La Figura~\ref{fig:rutas} muestra las rutas recomendadas sobre el grafo.
 
-\begin{figure}[H]
+\begin{figure}[htbp]
   \centering
   \includegraphics[width=\textwidth]{figuras/grafo_rutas.pdf}
   \caption{Rutas recomendadas por el algoritmo. En verde los tramos de ida y en naranja los de regreso; las líneas dobles son tramos que se usan en ambos sentidos.}
@@ -217,7 +218,7 @@ Si cada destino recibe la cuarta parte de los pedidos, el viaje completo promedi
 
 \subsection{Llegada de pedidos y asignación de destinos}
 
-Los pedidos llegan de forma variable con un promedio de $\lambda$ por hora, por lo que se modelaron como un proceso de Poisson: los tiempos entre llegadas son independientes y siguen una distribución exponencial con media $60/\lambda$ minutos (Law, 2015). Cada tiempo se genera con el método de la transformada inversa. Si $U$ es un número uniforme en $(0,1)$, entonces
+Los pedidos llegan de forma variable con un promedio de $\lambda$ por hora, y se modelaron como un proceso de Poisson. En ese modelo los tiempos entre llegadas son independientes y siguen una distribución exponencial con media $60/\lambda$ minutos (Law, 2015). Cada tiempo se genera con el método de la transformada inversa. Si $U$ es un número uniforme en $(0,1)$, entonces
 \begin{equation}
   X = -\frac{60}{\lambda}\,\ln(1-U)
 \end{equation}
@@ -235,7 +236,7 @@ La simulación termina cuando la lista de eventos queda vacía, es decir, cuando
 
 \subsection{Políticas comparadas y repeticiones}
 
-En la política actual cada vehículo usa la ruta de las hojas y regresa por el mismo camino; en la política del algoritmo usa la ida y el regreso de Dijkstra. Para que la comparación sea justa se usaron números aleatorios comunes: en cada repetición se genera la lista de pedidos, con sus instantes de llegada y destinos, a partir de una semilla, y esa misma lista se simula con las dos políticas. Así, las diferencias entre ambas corridas se deben solo a las rutas. Se hicieron 10 repeticiones por escenario con las semillas 1 a 10, ocho vehículos y ocho horas de recepción; las mismas semillas se usaron en los barridos de flota y de demanda.
+En la política actual cada vehículo usa la ruta de las hojas y regresa por el mismo camino, y en la del algoritmo usa la ida y el regreso de Dijkstra. Para que la comparación sea justa se usaron números aleatorios comunes. En cada repetición se genera la lista de pedidos, con sus instantes de llegada y destinos, a partir de una semilla, y esa misma lista se simula con las dos políticas. Así, las diferencias entre ambas corridas se deben solo a las rutas. Se hicieron 10 repeticiones por escenario con las semillas 1 a 10, ocho vehículos y ocho horas de recepción; las mismas semillas se usaron en los barridos de flota y de demanda.
 
 \subsection{Métricas}
 
@@ -249,21 +250,21 @@ Como referencia se calculó también la carga ofrecida
 \begin{equation}
   \rho = \frac{\lambda}{60}\cdot\frac{\bar c}{V},
 \end{equation}
-donde $\bar c$ es el viaje completo promedio de los cuatro destinos (113.5 minutos con las rutas actuales y 79.5 con las de Dijkstra). La carga $\rho$ es la fracción de la flota que en promedio se necesita para atender los pedidos al ritmo en que llegan; si $\rho\ge 1$, los vehículos no alcanzan y la cola crece durante toda la jornada.
+donde $\bar c$ es el viaje completo promedio de los cuatro destinos (113.5 minutos con las rutas actuales y 79.5 con las de Dijkstra). La carga $\rho$ es la fracción de la flota que en promedio se necesita para atender los pedidos al ritmo en que llegan. Si $\rho\ge 1$, los vehículos no alcanzan y la cola crece durante toda la jornada.
 
 \subsection{Verificación}
 
-El programa incluye pruebas automáticas que comprueban los tiempos de las rutas actuales y de Dijkstra, que con 200 vehículos ningún pedido espere y que con la ruta actual ninguna entrega a N40 sea puntual. Además, con una cola en orden de llegada cada pedido sale con el primer vehículo que se desocupa, así que la espera también puede calcularse directamente, pedido por pedido. Para los tres escenarios, la simulación por eventos dio exactamente la misma espera promedio y la misma cantidad de entregas puntuales que ese cálculo directo.
+El programa incluye pruebas automáticas que comprueban los tiempos de las rutas actuales y de Dijkstra, que con 200 vehículos ningún pedido espere y que con la ruta actual ninguna entrega a N40 sea puntual. Por otra parte, con una cola en orden de llegada cada pedido sale con el primer vehículo que se desocupa, así que la espera también puede calcularse directamente, pedido por pedido. Para los tres escenarios, la simulación por eventos dio exactamente la misma espera promedio y la misma cantidad de entregas puntuales que ese cálculo directo.
 
 \subsection{Aplicación}
 
 El modelo se programó en Go usando solo la biblioteca estándar. Al ejecutar \texttt{go run .} se inicia un servidor local y la aplicación se abre en el navegador en \url{http://localhost:8080} (Figura~\ref{fig:app}). En ella se elige el escenario (normal, Semana Santa, Navidad o personalizado) y se pueden cambiar el promedio de pedidos por hora, el número de vehículos, la duración de la recepción, la semilla y la cantidad de repeticiones. Al simular, la página muestra el promedio y la desviación estándar de cada métrica para las dos políticas, junto con la carga estimada de la flota.
 
-En la misma página se puede asignar un nuevo tiempo a una conexión, para representar congestión, o cerrarla, en uno o en ambos sentidos, y también restaurar la red original. Cada vez que cambia la red, las rutas del algoritmo se calculan otra vez con Dijkstra sobre la matriz modificada, tanto de ida como de regreso, y la página indica qué rutas cambiaron y cuánto tardan ahora. Las rutas actuales se mantienen; si uno de sus tramos queda cerrado, se reemplaza por el desvío más corto entre sus extremos. Un cambio que deje algún destino sin conexión con la bodega se rechaza. La página dibuja además el grafo con las rutas resaltadas. Los experimentos de este informe se generaron con la opción \texttt{-exportar}, que guarda los resultados en archivos CSV.
+En la misma página se puede asignar un nuevo tiempo a una conexión, para representar congestión, o cerrarla, en uno o en ambos sentidos, y también restaurar la red original. Cada vez que cambia la red, las rutas del algoritmo se calculan otra vez con Dijkstra sobre la matriz modificada, tanto de ida como de regreso, y la página indica qué rutas cambiaron y cuánto tardan ahora. Las rutas actuales se mantienen, pero si uno de sus tramos queda cerrado se reemplaza por el desvío más corto entre sus extremos. Un cambio que deje algún destino sin conexión con la bodega se rechaza. En la parte inferior, la página dibuja el grafo con las rutas resaltadas. Los experimentos de este informe se generaron con la opción \texttt{-exportar}, que guarda los resultados en archivos CSV.
 
-\begin{figure}[H]
+\begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.85\textwidth]{figuras/aplicacion.png}
+  \includegraphics[width=\textwidth]{figuras/aplicacion.png}
   \caption{Parte superior de la aplicación: parámetros de la simulación, resultados del escenario normal con 10 repeticiones y formulario para modificar o cerrar un tramo.}
   \label{fig:app}
 \end{figure}
@@ -274,7 +275,7 @@ En la misma página se puede asignar un nuevo tiempo a una conexión, para repre
 
 La Tabla~\ref{tab:escenarios} y la Figura~\ref{fig:escenarios} presentan los resultados de las 10 repeticiones de cada escenario con ocho vehículos. En el escenario normal, las rutas del algoritmo elevan las entregas puntuales de 62.5\,\% a 99.4\,\%, reducen la espera promedio de 11.6 a 1.8 minutos y el tiempo hasta la entrega de 68.1 a 37.3 minutos. En Semana Santa la puntualidad pasa de 30.1\,\% a 78.9\,\% y la espera de 70.6 a 17.8 minutos. En Navidad ambas políticas quedan lejos de la meta, con 9.4\,\% y 25.0\,\% de entregas puntuales y esperas promedio de 274.2 y 133.0 minutos. En las 30 parejas de corridas, la política del algoritmo obtuvo un porcentaje de entregas puntuales mayor que la política actual, con diferencias entre 3.6 y 82.2 puntos.
 
-\begin{table}[H]
+\begin{table}[htbp]
   \centering
   \footnotesize
   \setlength{\tabcolsep}{4pt}
@@ -298,7 +299,7 @@ La Tabla~\ref{tab:escenarios} y la Figura~\ref{fig:escenarios} presentan los res
   \end{tabular}
 \end{table}
 
-\begin{figure}[H]
+\begin{figure}[htbp]
   \centering
   \begin{tikzpicture}
     \begin{axis}[barras, ymax=125, ytick={0,25,50,75,100}, ylabel={Entregas puntuales (\%)}]
@@ -330,13 +331,13 @@ La Tabla~\ref{tab:escenarios} y la Figura~\ref{fig:escenarios} presentan los res
   \label{fig:escenarios}
 \end{figure}
 
-La utilización es menor con las rutas del algoritmo en los escenarios normal y Semana Santa porque cada pedido ocupa al vehículo menos tiempo: se hace el mismo trabajo con menos horas de vehículo. En Navidad la utilización es de 91\,\% con ambas políticas, porque los vehículos pasan casi toda la operación ocupados; lo que cambia es cuánto se alarga la jornada para terminar los pedidos. El tiempo adicional también muestra el efecto de la cola: en el escenario normal, el último pedido se entrega en promedio 69.0 minutos después del cierre con las rutas actuales y 24.0 con las nuevas, mientras que en Navidad la operación se extiende 10.9 horas con las rutas actuales y 5.3 horas con las del algoritmo.
+La utilización es menor con las rutas del algoritmo en los escenarios normal y Semana Santa porque cada pedido ocupa menos tiempo al vehículo, y el mismo trabajo se hace con menos horas de uso de la flota. En Navidad la utilización es de 91\,\% con ambas políticas, porque los vehículos pasan casi toda la operación ocupados, y lo que cambia es cuánto se alarga la jornada para terminar los pedidos. El tiempo adicional refleja el efecto de la cola. En el escenario normal, el último pedido se entrega en promedio 69.0 minutos después del cierre con las rutas actuales y 24.0 con las nuevas, mientras que en Navidad la operación se extiende 10.9 horas con las rutas actuales y 5.3 horas con las del algoritmo.
 
 \subsection{Tamaño de la flota}
 
-La Figura~\ref{fig:flota} muestra el porcentaje de entregas puntuales con 4 a 20 vehículos. Con las rutas del algoritmo se supera el 95\,\% con 7 vehículos en el escenario normal, con 10 en Semana Santa y con 15 en Navidad, y se llega al 100\,\% con 10, 11 y 18 vehículos, respectivamente. Con las rutas actuales la puntualidad nunca pasa de 76.9\,\%: a partir de cierto número de vehículos ya no hay espera, pero los pedidos a N40, que en estas repeticiones son cerca de la cuarta parte, siguen llegando tarde. En Navidad, incluso con 20 vehículos, la política actual se queda en 66.3\,\%.
+La Figura~\ref{fig:flota} muestra el porcentaje de entregas puntuales con 4 a 20 vehículos. Con las rutas del algoritmo se supera el 95\,\% con 7 vehículos en el escenario normal, con 10 en Semana Santa y con 15 en Navidad, y se llega al 100\,\% con 10, 11 y 18 vehículos, respectivamente. Con las rutas actuales la puntualidad nunca pasa de 76.9\,\%. A partir de cierto número de vehículos ya no hay espera, pero los pedidos a N40, que en estas repeticiones son cerca de la cuarta parte, siguen llegando tarde. En Navidad, incluso con 20 vehículos, la política actual se queda en 66.3\,\%.
 
-\begin{figure}[H]
+\begin{figure}[htbp]
   \centering
   \begin{tikzpicture}
     \begin{axis}[
@@ -365,9 +366,9 @@ La Figura~\ref{fig:flota} muestra el porcentaje de entregas puntuales con 4 a 20
 
 \subsection{Aumento de la demanda}
 
-La Figura~\ref{fig:demanda} muestra qué ocurre con ocho vehículos cuando el promedio de pedidos va de 1 a 12 por hora. Con las rutas del algoritmo la puntualidad se mantiene por encima de 94\,\% hasta 5 pedidos por hora y cae a 78.9\,\% con 6, a 42.8\,\% con 8 y a 25.0\,\% con 10. Con las rutas actuales nunca supera 76\,\%, aun con muy pocos pedidos, y cae a partir de 4 pedidos por hora; con 6 pedidos por hora ya está en 30.1\,\%. La espera crece mucho más rápido con las rutas actuales: con 8 pedidos por hora es de 169.3 minutos, contra 66.9 con las rutas del algoritmo.
+La Figura~\ref{fig:demanda} muestra qué ocurre con ocho vehículos cuando el promedio de pedidos va de 1 a 12 por hora. Con las rutas del algoritmo la puntualidad se mantiene por encima de 94\,\% hasta 5 pedidos por hora y cae a 78.9\,\% con 6, a 42.8\,\% con 8 y a 25.0\,\% con 10. Con las rutas actuales nunca supera 76\,\%, aun con muy pocos pedidos, y cae a partir de 4 pedidos por hora hasta 30.1\,\% con 6. La espera crece más rápido con las rutas actuales, y con 8 pedidos por hora llega a 169.3 minutos, contra 66.9 con las del algoritmo.
 
-\begin{figure}[H]
+\begin{figure}[htbp]
   \centering
   \begin{tikzpicture}
     \begin{axis}[
@@ -406,9 +407,9 @@ La Figura~\ref{fig:demanda} muestra qué ocurre con ocho vehículos cuando el pr
 
 \subsection{Cierre de un tramo}
 
-Como ejemplo de incidente vial se cerró la calle N17--N25 en ambos sentidos. Con la política actual, la ruta a N34 pierde ese tramo y el conductor toma desvíos: la ida pasa a ser N01, N09, N17, N26, N25, N33, N34 (49 minutos) y el regreso N34, N33, N25, N27, N19, N18, N17, N09, N01 (61 minutos), porque N26$\rightarrow$N17 no existe y el camino más corto de N25 a N17 da una vuelta larga. Con el algoritmo, Dijkstra cambia dos rutas: el regreso desde N34 pasa a N34, N26, N25, N27, N11, N10, N09, N01 (46 minutos en lugar de 34) y la ida a N40 a N01, N17, N26, N25, N27, N29, N31, N32, N40 (54 minutos en lugar de 47). Las demás rutas no cambian. La Tabla~\ref{tab:cierre} compara los resultados con los de la red original.
+Como ejemplo de incidente vial se cerró la calle N17--N25 en ambos sentidos. Con la política actual, la ruta a N34 pierde ese tramo y el conductor debe desviarse. La ida pasa a ser N01, N09, N17, N26, N25, N33, N34 (49 minutos) y el regreso N34, N33, N25, N27, N19, N18, N17, N09, N01 (61 minutos), porque N26$\rightarrow$N17 no existe y el camino más corto de N25 a N17 da una vuelta larga. Con el algoritmo, Dijkstra cambia dos rutas: el regreso desde N34 pasa a N34, N26, N25, N27, N11, N10, N09, N01 (46 minutos en lugar de 34) y la ida a N40 a N01, N17, N26, N25, N27, N29, N31, N32, N40 (54 minutos en lugar de 47). Las demás rutas no cambian. La Tabla~\ref{tab:cierre} compara los resultados con los de la red original.
 
-\begin{table}[H]
+\begin{table}[htbp]
   \centering
   \small
   \caption{Efecto del cierre de N17--N25 con ocho vehículos (promedio de 10 repeticiones).}
@@ -431,28 +432,28 @@ Como ejemplo de incidente vial se cerró la calle N17--N25 en ambos sentidos. Co
 
 \section{Discusión}
 
-Cambiar las rutas es la medida con mayor efecto y no requiere vehículos adicionales. El viaje completo promedio baja de 113.5 a 79.5 minutos, y eso actúa por dos vías. La primera es directa: con idas más cortas hay más margen para esperar y, en particular, los pedidos a N40 pasan de ser siempre tardíos a poder entregarse a tiempo. La segunda es la capacidad: si cada viaje dura menos, los vehículos vuelven antes, la carga de la flota baja de 0.95 a 0.66 en el escenario normal y la cola casi desaparece. Con las mismas condiciones, la puntualidad mejora 36.9 puntos en el escenario normal, 48.8 en Semana Santa y 15.6 en Navidad, y el tiempo adicional se reduce entre 52\,\% y 72\,\%.
+Cambiar las rutas es la medida con mayor efecto y no requiere vehículos adicionales. El viaje completo promedio baja de 113.5 a 79.5 minutos, y eso mejora la operación por dos razones. Con idas más cortas hay más margen para esperar, y los pedidos a N40 pasan de llegar siempre tarde a poder entregarse a tiempo. Por otro lado, como cada viaje dura menos, los vehículos vuelven antes a la bodega, la carga de la flota baja de 0.95 a 0.66 en el escenario normal y la cola casi desaparece. En las mismas condiciones, la puntualidad mejora 36.9 puntos en el escenario normal, 48.8 en Semana Santa y 15.6 en Navidad, y el tiempo adicional se reduce entre 52\,\% y 72\,\%.
 
-Al aumentar la demanda, la carga crece en proporción al número de pedidos. Con ocho vehículos, $\rho=1$ se alcanza con unos $60\cdot 8/113.5\approx 4.2$ pedidos por hora usando las rutas actuales y con unos $60\cdot 8/79.5\approx 6.0$ usando las del algoritmo. Esto coincide con la Figura~\ref{fig:demanda}: la política actual empieza a deteriorarse ya en el escenario normal, y la del algoritmo se mantiene bien hasta 5 pedidos por hora y empieza a fallar en Semana Santa, que con $\rho=0.99$ queda justo en el límite. En Navidad la carga supera 1 con ambas políticas y la cola crece durante toda la jornada, lo que explica esperas de varias horas y la variabilidad alta entre repeticiones: los días con más pedidos acumulan una cola mucho mayor.
+Al aumentar la demanda, la carga crece en proporción al número de pedidos. Con ocho vehículos, $\rho=1$ se alcanza con unos $60\cdot 8/113.5\approx 4.2$ pedidos por hora usando las rutas actuales y con unos $60\cdot 8/79.5\approx 6.0$ usando las del algoritmo. Esto coincide con la Figura~\ref{fig:demanda}, en la que la política actual empieza a deteriorarse desde el escenario normal, mientras que la del algoritmo se mantiene bien hasta 5 pedidos por hora y empieza a fallar en Semana Santa, que con $\rho=0.99$ queda justo en el límite. En Navidad la carga supera 1 con ambas políticas y la cola crece durante toda la jornada, lo que explica las esperas de varias horas. Lo mismo explica la variabilidad alta entre repeticiones, ya que los días con más pedidos acumulan una cola mucho mayor.
 
-La cantidad de vehículos se vuelve una limitación cuando $\rho$ se acerca a 1. Para que $\rho<1$ se necesitan al menos 8, 12 y 19 vehículos con las rutas actuales, y 6, 8 y 14 con las del algoritmo, en los escenarios normal, Semana Santa y Navidad. Esa condición evita que la cola crezca sin control, pero no garantiza la puntualidad; según el barrido de flota, para superar el 95\,\% de entregas puntuales con las rutas del algoritmo se necesitan 7, 10 y 15 vehículos. Con las rutas actuales ningún tamaño de flota alcanza esa meta, porque el límite lo pone la ruta a N40 y no la cantidad de vehículos. Así, la flota de ocho vehículos es suficiente en un día normal solo si se cambian las rutas; en Semana Santa hacen falta al menos dos vehículos más y en Navidad cerca del doble.
+La cantidad de vehículos se vuelve una limitación cuando $\rho$ se acerca a 1. Para que $\rho<1$ se necesitan al menos 8, 12 y 19 vehículos con las rutas actuales, y 6, 8 y 14 con las del algoritmo, en los escenarios normal, Semana Santa y Navidad. Esa condición evita que la cola crezca sin control, pero no garantiza la puntualidad. Según el barrido de flota, para superar el 95\,\% de entregas puntuales con las rutas del algoritmo se necesitan 7, 10 y 15 vehículos. Con las rutas actuales ningún tamaño de flota alcanza esa meta, porque el límite lo pone la ruta a N40 y no la cantidad de vehículos. Así, la flota de ocho vehículos es suficiente en un día normal solo si se cambian las rutas. En Semana Santa hacen falta al menos dos vehículos más y en Navidad cerca del doble.
 
-El cierre de N17--N25 afecta de forma distinta a cada política. En el escenario normal, la política actual pierde 5.6 puntos de puntualidad, porque el desvío de N34 alarga la ida 7 minutos y el regreso 19 y su carga llega a 1.00; la del algoritmo reorganiza las rutas y pierde solo 0.6 puntos. En Semana Santa ocurre lo contrario: la política del algoritmo pierde 8.1 puntos frente a 5.9 de la actual, porque el cierre lleva su carga de 0.99 a 1.05 y la flota pasa a estar saturada. En Navidad las dos políticas ya estaban saturadas antes del cierre. Aun así, en los tres escenarios las rutas recalculadas siguen dando mejores resultados que las actuales.
+El cierre de N17--N25 afecta de forma distinta a cada política. En el escenario normal, la política actual pierde 5.6 puntos de puntualidad, porque el desvío de N34 alarga la ida 7 minutos y el regreso 19 y su carga llega a 1.00. La del algoritmo reorganiza las rutas y pierde solo 0.6 puntos. En Semana Santa ocurre lo contrario. La política del algoritmo pierde 8.1 puntos frente a 5.9 de la actual, porque el cierre lleva su carga de 0.99 a 1.05 y la flota pasa a estar saturada. En Navidad las dos políticas ya estaban saturadas antes del cierre. Aun así, en los tres escenarios las rutas recalculadas siguen dando mejores resultados que las actuales.
 
-La simulación no representa varios aspectos de la operación real. Los tiempos de viaje son fijos, cuando en la práctica dependen del tráfico y de la hora. No se incluyen el tiempo de carga y entrega, los descansos, los turnos, las averías ni la posibilidad de llevar varios pedidos a la misma zona en un solo viaje. Se supone además que los pedidos llegan a un ritmo constante durante el día, sin horas pico, y que las cuatro zonas se reparten la demanda por igual; cada zona se trata como un punto, aunque en realidad incluye varias direcciones. Los cierres de tramos duran toda la jornada y no se consideran costos de combustible ni de personal. Finalmente, los resultados dependen de que la matriz refleje los tiempos actuales de la red.
+La simulación no representa varios aspectos de la operación real. Los tiempos de viaje son fijos, cuando en la práctica dependen del tráfico y de la hora. No se incluyen el tiempo de carga y entrega, los descansos, los turnos, las averías ni la posibilidad de llevar varios pedidos a la misma zona en un solo viaje. Se supone además que los pedidos llegan a un ritmo constante durante el día, sin horas pico, y que las cuatro zonas se reparten la demanda por igual. Cada zona se trata como un punto, aunque en realidad incluye varias direcciones. Los cierres de tramos duran toda la jornada y no se consideran costos de combustible ni de personal. Finalmente, los resultados dependen de que la matriz refleje los tiempos actuales de la red.
 
 \section{Conclusiones}
 
 \begin{enumerate}
-  \item La red es un grafo dirigido de 40 nodos y 144 arcos, con 18 calles de un solo sentido. Las cuatro rutas de las hojas de despacho son válidas de ida y de regreso, por lo que la instrucción de volver por el mismo camino puede cumplirse; sin embargo, la ida a N40 tarda 93 minutos y hace imposible que esas entregas sean puntuales.
+  \item La red es un grafo dirigido de 40 nodos y 144 arcos, con 18 calles de un solo sentido. Las cuatro rutas de las hojas de despacho son válidas de ida y de regreso, por lo que la instrucción de volver por el mismo camino puede cumplirse. Sin embargo, la ida a N40 tarda 93 minutos y hace imposible que esas entregas sean puntuales.
   \item Las rutas de Dijkstra reducen la ida en los cuatro destinos (de 59, 33, 42 y 93 minutos a 51, 18, 24 y 47) y el viaje completo promedio en 30\,\%. El regreso debe planificarse por separado, porque las idas óptimas usan calles de un solo sentido y no pueden recorrerse al revés.
   \item Con los mismos pedidos, las rutas del algoritmo elevan la puntualidad de 62.5\,\% a 99.4\,\% en el escenario normal, de 30.1\,\% a 78.9\,\% en Semana Santa y de 9.4\,\% a 25.0\,\% en Navidad, y reducen a menos de la mitad la espera y el tiempo adicional para terminar los pedidos.
-  \item Con ocho vehículos la flota alcanza para un día normal solo con las nuevas rutas. En Semana Santa trabaja al límite y en Navidad es insuficiente: para superar el 95\,\% de entregas puntuales con las rutas del algoritmo se necesitan alrededor de 10 vehículos en Semana Santa y 15 en Navidad.
+  \item Con ocho vehículos la flota alcanza para un día normal solo con las nuevas rutas. En Semana Santa trabaja al límite y en Navidad es insuficiente. Para superar el 95\,\% de entregas puntuales con las rutas del algoritmo se necesitan alrededor de 10 vehículos en Semana Santa y 15 en Navidad.
 \end{enumerate}
 
 \subsection*{Reflexión final}
 
-Para la empresa, el cambio con mayor impacto y menor costo es actualizar las hojas de despacho con rutas de ida y de regreso distintas, ya que mejora la puntualidad y reduce las horas extra sin comprar vehículos. Para las temporadas altas, el modelo indica que no basta con las rutas, y que conviene planificar con anticipación vehículos adicionales o temporales, en especial para Navidad. La aplicación permite repetir este análisis cuando cambie la demanda o cuando se cierre o congestione una calle, antes de tomar la decisión en la operación real.
+Para la empresa, el cambio con mayor impacto y menor costo es actualizar las hojas de despacho con rutas de ida y de regreso distintas, ya que mejora la puntualidad y reduce las horas extra sin comprar vehículos. En las temporadas altas no basta con cambiar las rutas, y conviene planificar con anticipación vehículos adicionales o temporales, sobre todo para Navidad. La aplicación permite repetir este análisis cuando cambie la demanda o cuando se cierre o congestione una calle, antes de tomar la decisión en la operación real.
 
 Estos resultados deben tomarse con cautela antes de aplicarlos. El modelo usa tiempos fijos, entregas instantáneas y una demanda uniforme, y no considera horarios de trabajo ni costos. Antes de cambiar las rutas convendría medir los tiempos reales de los nuevos recorridos, revisar con los conductores que las calles de un solo sentido se usen como indica la matriz y hacer una prueba piloto en uno o dos destinos.
 
