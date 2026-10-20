@@ -18,12 +18,25 @@ func main() {
 	fmt.Printf("%d pares de doble sentido (%d con tiempos distintos) y %d tramos de un solo sentido\n\n",
 		dobles, distintos, unSentido)
 
-	fmt.Println("Rutas actuales:")
+	actual, err := PoliticaActual(g)
+	if err != nil {
+		log.Fatal(err)
+	}
+	algoritmo, err := PoliticaAlgoritmo(g)
+	if err != nil {
+		log.Fatal(err)
+	}
+	reversible := PoliticaReversible(g)
+
 	for _, d := range destinos {
-		ruta := rutasActuales[d]
-		fmt.Printf("%s: %s\n", d, strings.Join(ruta, " "))
-		fmt.Printf("    ida:     %s\n", describir(g.TiempoRuta(ruta)))
-		fmt.Printf("    regreso: %s\n", describir(g.TiempoRuta(Invertir(ruta))))
+		fmt.Println("Destino", d)
+		mostrarRuta("actual", actual[d])
+		mostrarRuta("Dijkstra", algoritmo[d])
+		mostrarRuta("reversible", reversible[d])
+		if _, err := g.TiempoRuta(Invertir(algoritmo[d].Ida)); err != nil {
+			fmt.Printf("  la ida de Dijkstra no sirve para regresar: %v\n", err)
+		}
+		fmt.Println()
 	}
 
 	if err := os.WriteFile("informe/figuras/grafo.dot", []byte(g.DOT(nil)), 0o644); err != nil {
@@ -31,9 +44,7 @@ func main() {
 	}
 }
 
-func describir(t float64, err error) string {
-	if err != nil {
-		return "no válida (" + err.Error() + ")"
-	}
-	return fmt.Sprintf("%g min", t)
+func mostrarRuta(nombre string, r Ruta) {
+	fmt.Printf("  %-10s ida %3g min: %s\n", nombre, r.TIda, strings.Join(r.Ida, " "))
+	fmt.Printf("  %-10s reg %3g min: %s  (total %g)\n", "", r.TRegreso, strings.Join(r.Regreso, " "), r.Total())
 }
