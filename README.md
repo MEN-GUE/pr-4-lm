@@ -35,8 +35,9 @@ Se compila con pdfLaTeX (por ejemplo en Overleaf) junto con las carpetas
 
 ## Datos y figuras del informe
 
-Los experimentos usan 8 vehículos, 8 horas de recepción y las semillas 1 a 10
-(se cambia con `-repeticiones`). Los resultados quedan en CSV:
+Los experimentos usan 8 vehículos, 8 horas de recepción y 10 repeticiones con
+las semillas 1 a 10 (la cantidad se cambia con `-repeticiones`). Los resultados
+quedan en CSV:
 
 ```
 go run . -exportar informe/datos

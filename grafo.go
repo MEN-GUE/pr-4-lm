@@ -44,7 +44,8 @@ func LeerMatriz(archivo string) (*Grafo, error) {
 		g.W[i] = make([]float64, n)
 		for j, celda := range fila[1:] {
 			celda = strings.TrimSpace(celda)
-			if celda == "" || celda == "-" || celda == "—" {
+			// Una celda sin número (vacía o con un guion) indica que no hay conexión.
+			if !strings.ContainsAny(celda, "0123456789") {
 				g.W[i][j] = -1
 				continue
 			}
@@ -118,8 +119,8 @@ func (g *Grafo) Cambios(original *Grafo) []string {
 			if g.W[i][j] > 0 {
 				nuevo = fmt.Sprintf("%g min", g.W[i][j])
 			}
-			cambios = append(cambios, fmt.Sprintf("%s → %s: %g min → %s",
-				g.Nombres[i], g.Nombres[j], original.W[i][j], nuevo))
+			cambios = append(cambios, fmt.Sprintf("De %s a %s: %s (antes %g min)",
+				g.Nombres[i], g.Nombres[j], nuevo, original.W[i][j]))
 		}
 	}
 	return cambios

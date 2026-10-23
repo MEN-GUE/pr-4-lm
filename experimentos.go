@@ -93,12 +93,8 @@ func Resumir(ra, rb []Resultado) []FilaResumen {
 	return filas
 }
 
-// Exportar corre los experimentos del informe sobre la red g y guarda los
-// resultados en archivos CSV dentro de carpeta:
-//   - rutas.csv: rutas por destino de las tres políticas;
-//   - replicas.csv y resumen.csv: escenarios con 8 vehículos y 8 horas;
-//   - flota.csv: puntualidad y espera con 4 a 20 vehículos;
-//   - demanda.csv: puntualidad y espera con 1 a 12 pedidos por hora.
+// Exportar corre los experimentos del informe y guarda los resultados en CSV:
+// rutas, repeticiones y resumen por escenario, y los barridos de flota y demanda.
 func Exportar(g *Grafo, carpeta string, reps int) error {
 	actual, err := PoliticaActual(g)
 	if err != nil {

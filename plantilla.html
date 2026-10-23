@@ -48,7 +48,7 @@
   <label>Repeticiones<input type="number" name="repeticiones" min="1" max="100" value="{{.P.Repeticiones}}"></label>
   <button type="submit">Simular</button>
 </form>
-<p class="nota">La repetición k usa la semilla indicada más k. Con cada semilla se generan los pedidos una sola vez y se simulan con las dos políticas.</p>
+<p class="nota">Cada repetición usa una semilla distinta, empezando por la indicada. Los mismos pedidos se simulan con las dos políticas.</p>
 
 {{if .Resumen}}
 <h3 id="resultados">{{.Simulado.Escenario}}: {{.Simulado.PorHora}} pedidos/h, {{.Simulado.Vehiculos}} vehículos, {{.Simulado.Horas}} h de recepción, {{.Simulado.Repeticiones}} repetición(es) desde la semilla {{.Simulado.Semilla}}</h3>
@@ -56,13 +56,13 @@
   <tr><th>Métrica</th><th class="n">Rutas actuales</th><th class="n">Rutas del algoritmo</th><th class="n">Diferencia</th></tr>
   {{range .Resumen}}<tr>
     <td>{{.Metrica}}</td>
-    <td class="n">{{num .MediaAct}}{{if gt $.Simulado.Repeticiones 1}} ± {{num .DEAct}}{{end}}</td>
-    <td class="n">{{num .MediaAlg}}{{if gt $.Simulado.Repeticiones 1}} ± {{num .DEAlg}}{{end}}</td>
+    <td class="n">{{num .MediaAct}}{{if gt $.Simulado.Repeticiones 1}} &plusmn; {{num .DEAct}}{{end}}</td>
+    <td class="n">{{num .MediaAlg}}{{if gt $.Simulado.Repeticiones 1}} &plusmn; {{num .DEAlg}}{{end}}</td>
     <td class="n">{{num .Diferencia}}</td>
   </tr>
   {{end}}
 </table>
-<p class="nota">Valores promedio entre repeticiones (± desviación estándar). Carga estimada de la flota: {{printf "%.2f" (index .Carga 0)}} con las rutas actuales y {{printf "%.2f" (index .Carga 1)}} con las del algoritmo; si pasa de 1, los vehículos no alcanzan para la demanda y la cola crece durante la jornada.</p>
+<p class="nota">Valores promedio entre repeticiones (&plusmn; desviación estándar). Carga estimada de la flota: {{printf "%.2f" (index .Carga 0)}} con las rutas actuales y {{printf "%.2f" (index .Carga 1)}} con las del algoritmo; si pasa de 1, los vehículos no alcanzan para la demanda y la cola crece durante la jornada.</p>
 {{end}}
 
 <h2 id="red">Red vial</h2>

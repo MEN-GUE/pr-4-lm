@@ -3,7 +3,7 @@ package main
 import "math"
 
 // Dijkstra sobre la matriz de adyacencia. En cada paso se toma el nodo no
-// visitado con menor distancia, O(V²), que para 40 nodos es suficiente.
+// visitado con menor distancia, O(V^2), que para 40 nodos es suficiente.
 // Si hay empate se queda el nodo de menor índice.
 func (g *Grafo) Dijkstra(origen int) (dist []float64, previo []int) {
 	n := len(g.Nombres)

@@ -17,7 +17,7 @@ import (
 var textoPlantilla string
 
 var plantilla = template.Must(template.New("pagina").Funcs(template.FuncMap{
-	"ruta": func(r []string) string { return strings.Join(r, " → ") },
+	"ruta": func(r []string) string { return strings.Join(r, ", ") },
 	"num":  func(x float64) string { return strconv.FormatFloat(x, 'f', 1, 64) },
 }).Parse(textoPlantilla))
 
@@ -141,8 +141,8 @@ func (a *App) correrSimulacion(r *http.Request) string {
 	return ""
 }
 
-// carga es la fracción de la flota que haría falta en promedio para atender
-// la demanda: pedidos por minuto por duración media de un viaje redondo.
+// carga = pedidos por minuto * duración promedio de ida y vuelta / vehículos.
+// Si pasa de 1, la flota no alcanza para la demanda.
 func carga(pol Politica, porHora float64, vehiculos int) float64 {
 	ciclo := 0.0
 	for _, d := range destinos {
@@ -222,10 +222,10 @@ func (a *App) cambiarTramo(r *http.Request) string {
 		}
 		if cerrar {
 			nueva.W[i][j] = -1
-			hecho = append(hecho, fmt.Sprintf("Se cerró el tramo %s → %s.", o, d))
+			hecho = append(hecho, fmt.Sprintf("Se cerró el tramo de %s a %s.", o, d))
 		} else {
 			nueva.W[i][j] = tiempo
-			hecho = append(hecho, fmt.Sprintf("El tramo %s → %s ahora tarda %g min.", o, d, tiempo))
+			hecho = append(hecho, fmt.Sprintf("El tramo de %s a %s ahora tarda %g min.", o, d, tiempo))
 		}
 		return true
 	}
@@ -233,7 +233,7 @@ func (a *App) cambiarTramo(r *http.Request) string {
 		return fmt.Sprintf("No existe una conexión directa de %s a %s en la matriz.", desde, hasta)
 	}
 	if r.FormValue("ambos") != "" && !aplicar(hasta, desde) {
-		hecho = append(hecho, fmt.Sprintf("No existe el tramo %s → %s (calle de un solo sentido).", hasta, desde))
+		hecho = append(hecho, fmt.Sprintf("No existe el tramo de %s a %s (calle de un solo sentido).", hasta, desde))
 	}
 
 	antesAct, _ := PoliticaActual(a.red)
